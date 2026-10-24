@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>👥 Xodimlar va Login Parollarni Boshqarish</h2>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">⬅️ Asosiy panelga qaytish</a>
+</div>
+
+<div class="row">
+    <div class="col-md-5 mb-4">
+        <div class="card p-3 shadow-sm">
+            <h5 class="mb-3">➕ Yangi xodim qo'shish</h5>
+            <form method="POST" action="{{ url_for('manage_users') }}">
+                <div class="mb-3">
+                    <label class="form-label">Ism Familiya</label>
+                    <input type="text" name="full_name" class="form-control" placeholder="Masalan: Anvar Karimov" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Login (Tizimga kirish uchun)</label>
+                    <input type="text" name="username" class="form-control" placeholder="Masalan: anvar1" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Parol</label>
+                    <input type="password" name="password" class="form-control" placeholder="Parol kiriting" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Xodim roli (vazifasi)</label>
+                    <select name="role" class="form-select" required>
+                        <option value="driver">Dostavkachi</option>
+                        <option value="worker">Ishchi (Yuvuvchi)</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Xodim yaratish</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-md-7">
+        <div class="card p-3 shadow-sm">
+            <h5 class="mb-3">📋 Mavjud xodimlar ro'yxati</h5>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Ism Familiya</th>
+                            <th>Login</th>
+                            <th>Rol</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>#{{ u.id }}</td>
+                            <td><b>{{ u.full_name }}</b></td>
+                            <td><code>{{ u.username }}</code></td>
+                            <td>
+                                {% if u.role == 'admin' %}
+                                    <span class="badge bg-danger">Admin</span>
+                                {% elif u.role == 'driver' %}
+                                    <span class="badge bg-warning text-dark">Dostavkachi</span>
+                                {% else %}
+                                    <span class="badge bg-info text-dark">Ishchi</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

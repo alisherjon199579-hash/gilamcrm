@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🧼 Buyurtmalar va Boshqaruv Paneli</h2>
+    {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('manage_users') }}" class="btn btn-secondary">👥 Xodimlar va Login-Parollar</a>
+    {% endif %}
+</div>
+
+<!-- Buyurtma qo'shish formasi -->
+{% if current_user.role in ['admin', 'driver'] %}
+    <div class="card p-3 mb-4 shadow-sm">
+        <h4 class="mb-3">➕ Yangi buyurtma qo'shish</h4>
+        <form method="POST" action="{{ url_for('add_order') }}" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Mijoz ismi</label>
+                <input type="text" name="client_name" class="form-control" placeholder="Ism familiya" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Telefon raqam</label>
+                <input type="text" name="client_phone" class="form-control" placeholder="+998 90 123 45 67" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Manzil</label>
+                <input type="text" name="address" class="form-control" placeholder="Ko'cha, uy raqami" required>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Gilam (kv.m)</label>
+                <input type="number" step="0.1" id="carpet_sqm" name="carpet_sqm" class="form-control" placeholder="0" oninput="calculateTotal()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Ko'rpacha (dona)</label>
+                <input type="number" id="korpacha_count" name="korpacha_count" class="form-control" placeholder="0" oninput="calculateTotal()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Adyol (dona)</label>
+                <input type="number" id="adyol_count" name="adyol_count" class="form-control" placeholder="0" oninput="calculateTotal()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Umumiy Summa (so'm)</label>
+                <input type="number" step="100" id="total_price" name="total_price" class="form-control" placeholder="Summa" required>
+            </div>
+
+            {% if current_user.role == 'admin' %}
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Dostavkachi biriktirish</label>
+                <select name="driver_id" class="form-select">
+                    <option value="">Tanlang</option>
+                    {% for d in drivers %}
+                        <option value="{{ d.id }}">{{ d.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <!-- Formada Lokatsiya kiritish bloki -->
+            <div class="col-md-12 bg-light p-3 rounded border">
+                <label class="form-label fw-bold text-primary">📍 Mijoz Lokatsiyasi (Xaritadagi joylashuvi)</label>
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-8">
+                        <input type="text" id="new_order_location" name="location_link" class="form-control" placeholder="Google Maps havolasi (yoki GPS orqali avto aniqlang)">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" onclick="getGPSForNewOrder()" class="btn btn-warning w-100">
+                            📍 GPS orqali hozirgi joyni olish
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-success w-100 btn-lg">Buyurtmani saqlash</button>
+            </div>
+        </form>
+    </div>
+{% endif %}
+
+<!-- Qidirish va Ro'yxat -->
+<div class="card p-3 shadow-sm">
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-6">
+            <h4>📋 Barcha Buyurtmalar Ro'yxati</h4>
+        </div>
+        <div class="col-md-6">
+            <form method="GET" action="{{ url_for('dashboard') }}" class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Mijoz ismi yoki tel raqam..." value="{{ search_query }}">
+                <button class="btn btn-outline-primary" type="submit">Qidirish</button>
+                {% if search_query %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Barchasi</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mt-2">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Mijoz va Manzil</th>
+                    <th>Mahsulotlar</th>
+                    <th>Summa</th>
+                    <th>Dostavkachi</th>
+                    <th>Google Maps Lokatsiya</th>
+                    <th>Status</th>
+                    <th>Harakat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td><b>#{{ o.id }}</b></td>
+                    <td>
+                        <div><b>{{ o.client_name }}</b></div>
+                        <small class="text-muted">📞 {{ o.client_phone }}</small><br>
+                        <small class="text-secondary">📍 {{ o.address }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary">Gilam: {{ o.carpet_sqm }} kv.m</span><br>
+                        <span class="badge bg-secondary mt-1">Ko'rpacha: {{ o.korpacha_count }} ta</span><br>
+                        <span class="badge bg-dark mt-1">Adyol: {{ o.adyol_count }} ta</span>
+                    </td>
+                    <td><b>{{ "{:,.0f}".format(o.total_price) }} so'm</b></td>
+                    <td>{{ o.driver.full_name if o.driver else 'Biriktirilmagan' }}</td>
+                    <td style="min-width: 180px;">
+                        {% if o.location_link %}
+                            <a href="{{ o.location_link }}" target="_blank" class="btn btn-sm btn-info text-white mb-2 w-100 fw-bold">🗺️ Xaritada ochish</a>
+                        {% endif %}
+
+                        {% if current_user.role in ['admin', 'driver'] %}
+                            <div class="d-grid gap-1">
+                                <button type="button" onclick="getGPSLocation({{ o.id }})" class="btn btn-sm btn-outline-warning">📍 GPS bilan yangilash</button>
+                                
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="loc_{{ o.id }}" class="form-control form-control-sm" placeholder="Yangi link...">
+                                    <button type="button" onclick="saveLocation(this)" data-id="{{ o.id }}" class="btn btn-secondary btn-sm">Saqlash</button>
+                                </div>
+                            </div>
+                        {% else %}
+                            {% if not o.location_link %}
+                                <span class="text-muted">Tashlanmagan</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('update_status', order_id=o.id) }}">
+                            <select name="status" class="form-select form-select-sm mb-1" onchange="this.form.submit()">
+                                <option value="{{ o.status }}" selected>{{ o.status }}</option>
+                                <option value="Yangi zakaz">Yangi zakaz</option>
+                                <option value="Yuvilmoqda">Yuvilmoqda</option>
+                                <option value="Quritilmoqda">Quritilmoqda</option>
+                                <option value="Tayyor">Tayyor</option>
+                                <option value="Mijozga topshirildi">Mijozga topshirildi</option>
+                            </select>
+                        </form>
+                    </td>
+                    <td>
+                        {% if current_user.role == 'admin' %}
+                        <form method="POST" action="{{ url_for('delete_order', order_id=o.id) }}" onsubmit="return confirm('Haqiqatan ham bu buyurtmani oʻchirmoqchimisiz?');">
+                            <button type="submit" class="btn btn-sm btn-danger">O'chirish</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">Buyurtmalar topilmadi</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function calculateTotal() {
+    let sqm = parseFloat(document.getElementById('carpet_sqm').value) || 0;
+    let korpacha = parseInt(document.getElementById('korpacha_count').value) || 0;
+    let adyol = parseInt(document.getElementById('adyol_count').value) || 0;
+    
+    let pricePerSqm = 12000;  
+    let priceKorpacha = 15000; 
+    let priceAdyol = 20000;    
+    
+    let total = (sqm * pricePerSqm) + (korpacha * priceKorpacha) + (adyol * priceAdyol);
+    document.getElementById('total_price').value = total;
+}
+
+// Yangi buyurtma yaratayotganda GPS orqali joylashuvni maydonga yozish
+function getGPSForNewOrder() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+            let mapsLink = "https://maps.google.com/?q=" + lat + "," + lon;
+            document.getElementById('new_order_location').value = mapsLink;
+            alert("Lokatsiya muvaffaqiyatli aniqlandi va joylandi!");
+        }, function(error) {
+            alert("GPS aniqlanmadi! Manzil linkini nusxalab katakchaga qo'lda kiriting.");
+        }, { enableHighAccuracy: true });
+    } else {
+        alert("Brauzeringiz geolokatsiyani qo'llab-quvvatlamaydi.");
+    }
+}
+
+// Jadvaldagi buyurtmaga GPS orqali lokatsiya berish
+function getGPSLocation(orderId) {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+            let mapsLink = "https://maps.google.com/?q=" + lat + "," + lon;
+            
+            let form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/update_location/' + orderId;
+            
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'location_link';
+            input.value = mapsLink;
+            
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }, function(error) {
+            alert("GPS aniqlanmadi!");
+        }, { enableHighAccuracy: true });
+    }
+}
+
+// Havola (link) orqali saqlash
+function saveLocation(btn) {
+    let orderId = btn.getAttribute('data-id');
+    let link = document.getElementById('loc_' + orderId).value;
+    if (!link) {
+        alert("Iltimos, Google Maps havolasini kiriting!");
+        return;
+    }
+    
+    let form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/update_location/' + orderId;
+    
+    let input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'location_link';
+    input.value = link;
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}
