@@ -70,7 +70,7 @@ function cashCard(id,who){
   const c=courierCash(id),L=S.orders.filter(o=>o.collectedBy===id&&o.col&&(o.paidAt||0)>c.last).sort((a,b)=>(b.paidAt||0)-(a.paidAt||0)).slice(0,20);
   return `<div class="card stack"><div class="row"><span class="grow meta">${who?esc(who)+' · ':''}QO'LIMDA</span><span class="pill ${c.total?'p-no':'p-yes'}">${c.total?'Topshirish kerak':"Qo'lda pul yo'q"}</span></div>
     <b style="font-size:26px">${money(c.total)}</b><div class="meta">Naqd: ${money(c.cash)} · Karta: ${money(c.card)}</div><div class="meta">Oxirgi topshirish: ${c.last?when(c.last):'hali yo\'q'}</div>
-    ${L.length?`<div class="meta" style="margin-top:6px">Topshirilmagan to'lovlar:</div>`+L.map(o=>`<div class="row"><span class="grow meta">№${esc(o.no)} · ${esc(o.name)} · ${when(o.paidAt)}</span><span class="meta">${[+o.col.cash?'Naqd '+money(o.col.cash):'',+o.col.card?'Karta '+money(o.col.card):''].filter(Boolean).join(' · ')}</span></div>`).join(''):''}</div>`;
+    ${L.length?`<div class="meta" style="margin-top:6px">Topshirilmagan to'lovlar:</div>`+L.map(o=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><div class="meta">№${esc(o.no)} · ${esc(o.name)} · ${when(o.paidAt)}</div><b>${[+o.col.cash?'Naqd '+money(o.col.cash):'',+o.col.card?'Karta '+money(o.col.card):''].filter(Boolean).join(' · ')}</b></div>`).join(''):''}</div>`;
 }
 function courierBox(){return S.me&&S.me.role==='courier'&&S.filter!=='route'?`<div style="margin-bottom:12px">${cashCard(S.me.id)}</div>`:''}
 function handHtml(){
