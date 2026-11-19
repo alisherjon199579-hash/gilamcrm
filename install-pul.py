@@ -51,8 +51,8 @@ def _pay_guard(me, role, op, path, data, old):
         raise Err(400, "Summa to'liq emas.")
 
 '''
-    s = rep(s, "def check_write(me, role, op, path, data, old):\n    if role != 'admin':",
-            guard + "def check_write(me, role, op, path, data, old):\n    _pay_guard(me, role, op, path, data, old)\n    if role != 'admin':")
+    s = rep(s, "def check_write(me, role, op, path, data, old):\n",
+            guard + "def check_write(me, role, op, path, data, old):\n    _pay_guard(me, role, op, path, data, old)\n")
     return s
 
 
