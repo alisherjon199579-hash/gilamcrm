@@ -5,6 +5,7 @@ import os, shutil, sys
 
 MARK = '/* vps-eslatma-v1 */'
 MARK2 = '/* vps-eslatma-v2 */'
+MARK3 = '/* vps-eslatma-v3 */'
 
 
 def rep(s, old, new, n=1):
@@ -75,19 +76,31 @@ function vpsDue(){""")
     return h, b
 
 
+def upgrade_v3(h):
+    """v3: «To'ladim» bosilgach ham bosh sahifada kichik karta qoladi (havolani kiritish/ochish uchun)."""
+    h = rep(h, "/* vps-eslatma-v2 */", "/* vps-eslatma-v2 */ /* vps-eslatma-v3 */")
+    h = rep(h, "function vpsDue(){", """function vpsMini(){if(!isAdmin())return'';const r=S.remind.find(x=>x.id==='vps')||{},ym=new Date().getFullYear()+'-'+p2(new Date().getMonth()+1);
+  return `<div class="card stack" style="margin-bottom:12px"><div class="row"><b class="grow">Server to'lovi</b><span class="pill ${r.paid===ym?'p-yes':'p-wait'}">${r.paid===ym?"Shu oy to'langan":"Eslatma 10-sanada"}</span></div>${r.url?`<a class="btn wide" href="${esc(r.url)}" target="_blank" rel="noopener">To'lov sahifasini ochish</a>`:''}<button class="btn sm" data-act="vpsurl">${r.url?"Havolani o'zgartirish":"Havola qo'shish"}</button></div>`}
+function vpsDue(){""")
+    h = rep(h, ":'')+_dhV()}", ":vpsMini())+_dhV()}")
+    return h
+
+
 def main(dirs):
     for d in dirs:
         ps = [os.path.join(d, n) for n in ('index.html', 'server.py', 'bot.py')]
         h, sv, bt = [open(p, encoding='utf-8').read() for p in ps]
-        if MARK2 in h:
+        if MARK3 in h:
             print(d, ": allaqachon o'rnatilgan, o'tkazib yuborildi")
             continue
-        if MARK in h:  # v1 o'rnatilgan: faqat havola qismi qo'shiladi
+        if MARK2 in h:
+            new = [upgrade_v3(h), sv, bt]
+        elif MARK in h:
             nh, nb = upgrade_v2(h, bt)
-            new = [nh, sv, nb]
+            new = [upgrade_v3(nh), sv, nb]
         else:
             nh, nb = upgrade_v2(patch_html(h), patch_bot(bt))
-            new = [nh, patch_server(sv), nb]
+            new = [upgrade_v3(nh), patch_server(sv), nb]
         for p, t in zip(ps, new):
             shutil.copy2(p, p + '.bak-vps')
             open(p, 'w', encoding='utf-8').write(t)
