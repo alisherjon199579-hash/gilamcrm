@@ -45,33 +45,35 @@ function doPost(e){
       sh.autoResizeColumns(1,w);
     });
     dash(ss);
-    var f=ss.getSheets()[0];
-    if(ss.getSheets().length>1&&f.getLastRow()==0&&/^(Sheet1|Varaq1|Лист1|Sheet 1)$/.test(f.getName()))ss.deleteSheet(f);
+    ss.getSheets().forEach(function(f){if(ss.getSheets().length>1&&f.getLastRow()==0&&/^(Sheet1|Varaq1|Лист1|Sheet 1)$/.test(f.getName()))ss.deleteSheet(f)});
     return out({ok:true});
   }catch(err){return out({ok:false,error:String(err)})}
 }
+function setF(r,f){
+  r.setFormula(f.replace(/§/g,','));
+  SpreadsheetApp.flush();
+  if(/^#(ERROR|NAME)/.test(String(r.getDisplayValue())))r.setFormula(f.replace(/§/g,';'));
+}
 function dash(ss){
-  var sh=ss.getSheetByName('Hisobot');
-  if(!sh){
-    sh=ss.insertSheet('Hisobot',0);
-    sh.getRange('A1').setValue('Hisobot').setFontSize(16).setFontWeight('bold');
-    var kp=[['Zakazlar soni','=COUNTA(Zakazlar!A2:A)'],['Zakazlar summasi','=SUM(Zakazlar!J2:J)'],["To'langan",'=SUM(Zakazlar!K2:L)'],['Qarz','=SUM(Zakazlar!M2:M)'],['Mijozlar soni','=COUNTA(Mijozlar!A2:A)'],['Kassa: boshqa kirim','=SUMIF(Kassa!B2:B,"Kirim",Kassa!C2:C)'],['Kassa: chiqim','=SUMIF(Kassa!B2:B,"Chiqim",Kassa!C2:C)'],['Ishlagan soat (jami)',"=SUM('Soat (oylik)'!E2:E)"]];
-    sh.getRange(3,1,kp.length,2).setFormulas(kp);
-    sh.getRange(3,2,kp.length,1).setNumberFormat('#,##0').setFontWeight('bold');
-    sh.getRange('D2').setValue('Eng katta qarzdorlar').setFontWeight('bold');
-    sh.getRange('D3').setFormula('=IFERROR(QUERY(Mijozlar!A1:G,"select A,B,F where F>0 order by F desc limit 10",1),"Qarzdor yo\'q")');
-    sh.getRange('H2').setValue('Dostavchilar bo\'yicha').setFontWeight('bold');
-    sh.getRange('H3').setFormula('=IFERROR(QUERY(Zakazlar!A1:P,"select N,count(A),sum(J) where N<>\'\' group by N order by sum(J) desc",1),"Biriktirilgan zakaz yo\'q")');
-    sh.getRange('A13').setValue('Holat bo\'yicha').setFontWeight('bold');
-    sh.getRange('A14').setFormula('=IFERROR(QUERY(Zakazlar!A1:P,"select F,count(A),sum(J) where F<>\'\' group by F",1),"")');
-    sh.setColumnWidths(1,1,170);sh.setColumnWidths(2,1,110);sh.setColumnWidths(4,1,160);sh.setColumnWidths(5,1,120);sh.setColumnWidths(6,1,90);sh.setColumnWidths(8,1,150);
-  }
+  var sh=ss.getSheetByName('Hisobot')||ss.insertSheet('Hisobot',0);
+  sh.clear();
   sh.getCharts().forEach(function(c){sh.removeChart(c)});
+  sh.getRange('A1').setValue('Hisobot').setFontSize(16).setFontWeight('bold');
+  var kp=[['Zakazlar soni','=COUNTA(Zakazlar!A2:A)'],['Zakazlar summasi','=SUM(Zakazlar!J2:J)'],["To'langan",'=SUM(Zakazlar!K2:L)'],['Qarz','=SUM(Zakazlar!M2:M)'],['Mijozlar soni','=COUNTA(Mijozlar!A2:A)'],['Kassa: boshqa kirim','=SUMIF(Kassa!B2:B§"Kirim"§Kassa!C2:C)'],['Kassa: chiqim','=SUMIF(Kassa!B2:B§"Chiqim"§Kassa!C2:C)'],['Ishlagan soat (jami)',"=SUM('Soat (oylik)'!E2:E)"]];
+  kp.forEach(function(k,i){sh.getRange(3+i,1).setValue(k[0]);setF(sh.getRange(3+i,2),k[1])});
+  sh.getRange(3,2,kp.length,1).setNumberFormat('#,##0').setFontWeight('bold');
+  sh.getRange('D2').setValue('Eng katta qarzdorlar').setFontWeight('bold');
+  setF(sh.getRange('D3'),'=IFERROR(QUERY(Mijozlar!A1:G§"select A,B,F where F>0 order by F desc limit 10"§1)§"Qarzdor yo\'q")');
+  sh.getRange('H2').setValue('Dostavchilar bo\'yicha').setFontWeight('bold');
+  setF(sh.getRange('H3'),'=IFERROR(QUERY(Zakazlar!A1:P§"select N,count(A),sum(J) where N<>\'\' group by N order by sum(J) desc"§1)§"Biriktirilgan zakaz yo\'q")');
+  sh.getRange('A13').setValue('Holat bo\'yicha').setFontWeight('bold');
+  setF(sh.getRange('A14'),'=IFERROR(QUERY(Zakazlar!A1:P§"select F,count(A),sum(J) where F<>\'\' group by F"§1)§"")');
+  sh.setColumnWidths(1,1,170);sh.setColumnWidths(2,1,110);sh.setColumnWidths(4,1,160);sh.setColumnWidths(5,1,120);sh.setColumnWidths(6,1,90);sh.setColumnWidths(8,1,150);
   var oy=ss.getSheetByName('Oylar');
   if(oy&&oy.getLastRow()>1){
     var n=oy.getLastRow();
-    sh.insertChart(sh.newChart().setChartType(Charts.ChartType.COLUMN).addRange(oy.getRange(1,1,n,1)).addRange(oy.getRange(1,3,n,2)).setPosition(22,1,0,0).setOption('title',"Oylar: zakaz summasi va to'langan").setOption('width',520).setOption('height',280).build());
-    sh.insertChart(sh.newChart().setChartType(Charts.ChartType.COLUMN).addRange(oy.getRange(1,1,n,1)).addRange(oy.getRange(1,6,n,2)).setPosition(22,5,0,0).setOption('title','Oylar: boshqa kirim va chiqim').setOption('width',520).setOption('height',280).build());
+    sh.insertChart(sh.newChart().setChartType(Charts.ChartType.COLUMN).addRange(oy.getRange(1,1,n,1)).addRange(oy.getRange(1,3,n,2)).setNumHeaders(1).setPosition(22,1,0,0).setOption('title',"Oylar: zakaz summasi va to'langan").setOption('width',520).setOption('height',280).build());
+    sh.insertChart(sh.newChart().setChartType(Charts.ChartType.COLUMN).addRange(oy.getRange(1,1,n,1)).addRange(oy.getRange(1,6,n,2)).setNumHeaders(1).setPosition(22,5,0,0).setOption('title','Oylar: boshqa kirim va chiqim').setOption('width',520).setOption('height',280).build());
   }
 }"""
 
